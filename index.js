@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const { writeFile } = require('fs');
 const Promise = require('bluebird');
 const argv = require('minimist')(process.argv.slice(2));
 const { isFunction } = require('lodash');
@@ -31,5 +32,20 @@ connect()
       return executeQuery(queryName);
     }
   })
-  .then(console.log)
+  .then(data => {
+    if(argv['outfile']) {
+      writeFile(argv['outfile'], JSON.stringify(data), err => {
+        if (err) {
+          console.log(`Couldn't write output to file ${argv['outfile']}.`)
+          console.log(err);
+        } else {
+          console.log(`Output has been written to file ${argv['outfile']}.`);
+          process.exit(1);
+        }
+      });
+    } else {
+      console.log(data);
+      process.exit(1);
+    }
+  })
   .catch(console.log);
