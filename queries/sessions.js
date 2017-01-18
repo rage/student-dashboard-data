@@ -52,6 +52,26 @@ function getUsersSessions({ userId, courseId }) {
   });
 }
 
+function getGroupToSession(users) {
+  return _.chain(users)
+    .toPairs()
+    .groupBy(pair => {
+      const { meta: { group, orientation } } = pair[1];
+
+      return `${orientation || '_'},${group || '_'}`;
+    })
+    .mapValues(value => {
+      const dataValues = value.map(item => item[1]);
+
+      return {
+        sessions: _.meanBy(dataValues, 'sessions'),
+        actions: _.meanBy(dataValues, 'actions'),
+        duration: _.meanBy(dataValues, 'duration'),
+      };
+    })
+    .value();
+}
+
 function getCoursesSessionSummary(courseId) {
   const stream = getConnection().collection('participants').find({ courseId: courseId.toString(), participating: true });
 
@@ -66,7 +86,7 @@ function getCoursesSessionSummary(courseId) {
         const promise = getUsersSessions({ userId: participant.userId, courseId })
           .then(data => {
             return data
-              ? { data, meta: { userId: participant.userId, orientation: participant.orientation || null, visualizationType: participant.visualizationType } }
+              ? { data, meta: { userId: participant.userId, orientation: participant.orientation || null, group: participant.group.toString() } }
               : null;
           });
 
@@ -94,7 +114,7 @@ function getCoursesSessionSummary(courseId) {
           duration: _.meanBy(allUsersSessions, data => data.duration)
         };
 
-        resolve(sessions);
+        resolve(Object.assign({}, sessions, { groups: getGroupToSession(sessions.users) }));
       });
   });
 }
