@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const path = require('path');
 const { writeFile } = require('fs');
 const Promise = require('bluebird');
 const argv = require('minimist')(process.argv.slice(2));
@@ -24,7 +25,7 @@ connect()
 
     const queryName = argv['query'];
 
-    if(!queryName) {
+    if (!queryName) {
       return Promise.reject('No query provided.');
     } else {
       console.log(`Executing query ${queryName}...`);
@@ -34,7 +35,7 @@ connect()
   })
   .then(data => {
     if(argv['outfile']) {
-      writeFile(argv['outfile'], JSON.stringify(data), err => {
+      writeFile(path.join(__dirname, 'data', argv['outfile']), JSON.stringify(data), err => {
         if (err) {
           console.log(`Couldn't write output to file ${argv['outfile']}.`)
           console.log(err);

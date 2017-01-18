@@ -4,7 +4,7 @@ const _ = require('lodash');
 const { getConnection } = require('../connection');
 
 function getUsersSessions({ userId, courseId }) {
-  const query = { userId: userId.toString(), source: courseId.toString() };
+  const query = { userId: userId.toString(), source: courseId.toString(), participating: true };
 
   const options = {
     sort: [['userId', 'asc'], ['createdAtAdjustedToTz', 'asc']]
@@ -53,7 +53,7 @@ function getUsersSessions({ userId, courseId }) {
 }
 
 function getCoursesSessionSummary(courseId) {
-  const stream = getConnection().collection('participants').find({ courseId: courseId.toString() });
+  const stream = getConnection().collection('participants').find({ courseId: courseId.toString(), participating: true });
 
   const sessions = {
     users: {},
@@ -66,7 +66,7 @@ function getCoursesSessionSummary(courseId) {
         const promise = getUsersSessions({ userId: participant.userId, courseId })
           .then(data => {
             return data
-              ? { data, meta: { userId: participant.userId } }
+              ? { data, meta: { userId: participant.userId, orientation: participant.orientation || null, visualizationType: participant.visualizationType } }
               : null;
           });
 
@@ -78,8 +78,10 @@ function getCoursesSessionSummary(courseId) {
           const userSessions = _.values(sessionData.data);
 
           _.set(sessions, ['users', sessionData.meta.userId], {
+            sessions: userSessions.length,
             actions: _.meanBy(userSessions, data => data.actions.length),
-            duration: _.meanBy(userSessions, data => data.duration) / 1000
+            duration: _.meanBy(userSessions, data => data.duration) / 1000,
+            meta: sessionData.meta
           });
         }
       })
@@ -87,6 +89,7 @@ function getCoursesSessionSummary(courseId) {
         const allUsersSessions = _.values(sessions.users);
 
         sessions.total = {
+          sessions: _.meanBy(allUsersSessions, data => data.sessions),
           actions: _.meanBy(allUsersSessions, data => data.actions),
           duration: _.meanBy(allUsersSessions, data => data.duration)
         };
